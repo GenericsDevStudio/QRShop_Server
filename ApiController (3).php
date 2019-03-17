@@ -2,7 +2,7 @@
 header('Access-Control-Allow-Origin: *'); 
     header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token , Authorization');
-class User {
+class User { 
    public $id;
    public $email;
    public $password;
@@ -51,6 +51,17 @@ function __construct($users,$good){
 $this->users=$users;
 $this->good=$good;
 }
+}
+
+class Product{
+   public $identifier;
+   public $name;
+   public $price;
+
+function __construct($identifier,$name,$price){
+$this->identifier=$identifier;
+$this->name=$name;
+$this->price=$price;}
 }
 
 class Note {
@@ -331,38 +342,97 @@ $connection = Yii::app()->db;
          }
 
 }
+    public function actionbuy()
+                  {// Check if id was submitted via GET
+                      
+                  if(isset($_POST['id'])and isset($_POST['code'])) 
+                      {$id = $_POST['id'];
+                        $code=$_POST['code'];
+              		
+              
+           
+                  $user_cash = Yii::app()->db->createCommand()
+                    ->select('cash')
+                    ->from('Users_QR')
+                    ->where("`id` = '".$id."'")
+            ->QueryScalar();
+      
+            $goods_price=Yii::app()->db->createCommand()
+              ->select('price')
+              ->from('Goods')
+              ->where("`code` = '".$code."'")
+      ->QueryScalar();
 
-
-
-
- public function actionAddnote()
-    {// Check if id was submitted via GET
+      if($user_cash>=$goods_price){
         
-    if(isset($_POST['userid'])and isset($_POST['title'])and isset($_POST['content']))  
-        {$userid= $_POST['userid'];
-	     $title= $_POST['title'];
-		 $content= $_POST['content'];
-                   $date=date("y.m.d"); 
-	$connection = Yii::app()->db;
-         $sql = "INSERT INTO `notes`(`date`, `user_id`, `title`, `content`) 
-		 values ('".$date."','".$userid."','".$title."','".$content."')";
-         $command = $connection->createCommand($sql)->execute();
+
+        
+        $goods_count=Yii::app()->db->createCommand()
+          ->select('count')
+          ->from('Goods')
+          ->where("`code` = '".$code."'")
+  ->QueryScalar();
+
+  
+  $goods_count++;
+
+  
+  $connection = Yii::app()->db;
+              $sql = "UPDATE `Goods` SET `count`='".$goods_count."' WHERE `code`='".$code."'";
+              $command = $connection->createCommand($sql)->execute();
+
+    $update_cash=$user_cash-$goods_price;
+
+  $connection1 = Yii::app()->db;
+                $sql1 = "UPDATE `Users_QR` SET `cash`='".$update_cash."' WHERE `id`='".$id."'";
+                $command1 = $connection1->createCommand($sql1)->execute();
+
+                $spend_cash=Yii::app()->db->createCommand()
+                  ->select('spend_cash')
+                  ->from('Users_QR')
+                  ->where("`id` = '".$id."'")
+                ->QueryScalar();
+
+    $update_spend_cash=$spend_cash+$goods_price;
+
+$connection2 = Yii::app()->db;
+                $sql2 = "UPDATE `Users_QR` SET `spend_cash`='".$update_spend_cash."' WHERE `id`='".$id."'";
+                $command2 = $connection2->createCommand($sql2)->execute();
+
+                $return=Yii::app()->db->createCommand()
+                  ->select('*')
+                  ->from('Goods')
+                  ->where("`code` = '".$code."'")
+           ->QueryAll();
 
 
+$productm=[];
+$Product=new Product;
+foreach($return as $k){
+$identifier=$k["code"];
+$name=$k["name"];
+$price=$k["price"];
 
- $idnote = Yii::app()->db->createCommand()
-                ->select('noteid')
-                ->from('notes')
-                ->where("`user_id` = '".$userid."' AND `title` = '".$title."' AND `content` = '".$content."'")
-				->QueryScalar();
-         $this->_sendResponse(200,$idnote);
-	}else {                  
-                        // Model not implemented error
-                        $this->_sendResponse(500, 'Error: Щось не то з параметрами  add' );
-                        Yii::app()->end();
-           }
-                               
-	}   
+
+$Product->__construct($identifier,$name,$price);
+}
+
+
+      
+       
+      }
+      else {$return="Недостатньо коштів";}
+                  
+                     
+              
+                       $this->_sendResponse(200,json_encode($Product,JSON_PRETTY_PRINT));
+              	}else {                  
+                                      // Model not implemented error
+                                      $this->_sendResponse(500, 'Error: Щось не то з параметрами  add' );
+                                      Yii::app()->end();
+                         }
+                                             
+              	}
 
 
   public function actionEditnote()//-----------------------------------------------------

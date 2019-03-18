@@ -4,7 +4,7 @@ header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token , Authorization');
 class User { 
    public $id;
-   public $email;
+   public $email; 
    public $password;
 
 function __construct($id,$email,$password){
